@@ -22,6 +22,7 @@ import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
 import openpi.policies.ur5e_policy as ur5e_policy
 import openpi.shared.download as _download
+import openpi.shared.nnx_utils as nnx_utils
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
 import openpi.training.misc.roboarena_config as roboarena_config
@@ -1550,6 +1551,74 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=60_000,
         freeze_filter=pi0_config.Pi0Config(freeze_paligemma=True).get_freeze_filter(),
+        ema_decay=None,
+        save_interval=5_000,
+        keep_period=10_000,
+        batch_size=24,
+    ),
+    #
+    # SigLIP vision encoder LoRA ablation study
+    #
+    TrainConfig(
+        name="pi0_ur_tasks_merged_lora_r32_freeze_siglip",
+        model=pi0_config.Pi0Config(
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+            paligemma_lora_rank=32,
+            paligemma_lora_alpha=32,
+            action_expert_lora_rank=32,
+            action_expert_lora_alpha=32,
+            action_horizon=30,
+        ),
+        data=LeRobotUR5DataConfig(
+            repo_id="anonymous-icann26/ur-tasks-merged",
+            base_config=DataConfig(
+                prompt_from_task=True,
+            ),
+            assets=AssetsConfig(asset_id="anonymous-icann26/ur-tasks-merged"),
+            extra_delta_transform=True,
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=60_000,
+        freeze_filter=nnx.Any(
+            pi0_config.Pi0Config(
+                paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+            ).get_freeze_filter(),
+            nnx_utils.PathRegex(".*img.*"),
+        ),
+        ema_decay=None,
+        save_interval=5_000,
+        keep_period=10_000,
+        batch_size=24,
+    ),
+    TrainConfig(
+        name="pi0_ur_tasks_merged_lora_r32_lora_siglip",
+        model=pi0_config.Pi0Config(
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+            paligemma_lora_rank=32,
+            paligemma_lora_alpha=32,
+            action_expert_lora_rank=32,
+            action_expert_lora_alpha=32,
+            siglip_lora_rank=32,
+            siglip_lora_alpha=32,
+            action_horizon=30,
+        ),
+        data=LeRobotUR5DataConfig(
+            repo_id="anonymous-icann26/ur-tasks-merged",
+            base_config=DataConfig(
+                prompt_from_task=True,
+            ),
+            assets=AssetsConfig(asset_id="anonymous-icann26/ur-tasks-merged"),
+            extra_delta_transform=True,
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=60_000,
+        freeze_filter=pi0_config.Pi0Config(
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+            siglip_lora_rank=32,
+        ).get_freeze_filter(),
         ema_decay=None,
         save_interval=5_000,
         keep_period=10_000,
